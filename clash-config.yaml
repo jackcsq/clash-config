@@ -1,0 +1,298 @@
+# Clash-ALL 优化配置
+# ========================
+
+# 机场节点订阅
+
+proxy-providers:
+
+  机场名1:
+    url: "你的机场订阅地址"
+    type: http
+    interval: 86400
+    health-check:
+      enable: true
+      url: https://www.gstatic.com/generate_204
+      interval: 300
+    proxy: 直连
+    
+  机场名2:
+    url: "你的第二个机场订阅地址"
+    type: http
+    interval: 86400
+    health-check:
+      enable: true
+      url: https://www.gstatic.com/generate_204
+      interval: 300
+    proxy: 直连       
+
+proxies:
+  - {name: 直连, type: direct}
+  - {name: 拒绝, type: reject}
+
+# ========================
+# 主要端口设置
+# ========================
+port: 7890
+socks-port: 7891
+redir-port: 7892
+mixed-port: 7893
+tproxy-port: 7895
+
+allow-lan: true
+mode: rule
+log-level: info
+
+external-controller: 0.0.0.0:9090
+external-ui: ui
+external-ui-name: zashboard
+external-ui-url: https://github.moeyy.xyz/https://github.com/Zephyruso/zashboard/archive/refs/heads/gh-pages.zip
+secret: "123456"
+
+# ========================
+# DNS 设置
+# ========================
+dns:
+  enable: true
+  listen: 0.0.0.0:7874
+  ipv6: true
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.20.0.1/16
+  nameserver:
+    - 223.5.5.5
+  fake-ip-filter:
+    - +.lan
+    - +.local
+    - geosite:cn
+# mitce
+    - +.mitce.net 
+    - +.ddns-link-b5.uk
+    - +.dexlos.com
+
+ipv6: true
+
+# ========================
+# TUN 模块
+# ========================
+tun:
+  enable: true
+  stack: gvisor
+  device: utun
+  endpoint-independent-nat: true
+  auto-route: false
+  auto-detect-interface: false
+  auto-redirect: false
+  strict-route: false
+
+profile:
+  store-selected: true
+  store-fake-ip: true
+
+# ========================
+# 策略组定义
+# ========================
+default: &default
+  type: select
+  proxies:
+    - 直连
+    - 所有-手动
+    - 所有-自动
+    - 香港-故转
+    - 台湾-故转
+    - 新加坡-故转
+    - 美国-故转
+    - 其他-故转
+    - 拒绝
+
+proxy-groups:
+
+  # YouTube故转组
+  - name: YouTube故转
+    type: fallback
+    interval: 300
+    lazy: false
+    proxies:
+      - 美国-故转
+      - 香港-故转
+      - 台湾-故转
+      - 新加坡-故转
+      - 其他-故转
+
+  # 基础服务组
+  - {name: YouTube, type: select, proxies: [YouTube故转, 美国-故转, 香港-故转, 台湾-故转, 新加坡-故转, 其他-故转, 拒绝]}
+  - {name: 国外, type: select, proxies: [美国-故转, 香港-故转, 台湾-故转, 新加坡-故转, 其他-故转, 拒绝]}
+  - {name: 国内, type: select, proxies: [直连, 美国-故转, 香港-故转, 台湾-故转, 新加坡-故转, 其他-故转]}
+  - {name: 其他, type: select, proxies: [美国-故转, 香港-故转, 台湾-故转, 新加坡-故转, 其他-故转, 拒绝]}
+
+  - name: 所有-手动
+    type: select
+    include-all: true
+    filter: "^((?!(直连|拒绝)).)*$"
+
+  - name: 所有-自动
+    type: url-test
+    include-all: true
+    tolerance: 50
+    interval: 300
+    filter: "^((?!(直连|拒绝)).)*$"
+
+  # 香港组
+  - name: 香港-故转
+    type: fallback
+    interval: 300
+    lazy: false
+    proxies:
+      - 香港-主节点
+      - 香港-自动
+  
+  - name: 香港-主节点
+    type: select
+    include-all: true
+    filter: "(?=.*(广港|香港|HK|Hong Kong|🇭🇰|HongKong)).*$"
+    
+  - name: 香港-手动
+    type: select
+    include-all: true
+    filter: "(?=.*(广港|香港|HK|Hong Kong|🇭🇰|HongKong)).*$"
+    
+  - name: 香港-自动
+    type: url-test
+    include-all: true
+    tolerance: 50
+    interval: 300
+    filter: "(?=.*(广港|香港|HK|Hong Kong|🇭🇰|HongKong)).*$"
+ 
+  # 台湾组
+  - name: 台湾-故转
+    type: fallback
+    interval: 300
+    lazy: false
+    proxies:
+      - 台湾-主节点
+      - 台湾-自动
+  - name: 台湾-主节点
+    type: select
+    include-all: true
+    filter: "(?=.*(广台|台湾|台灣|TW|Tai Wan|🇹🇼|🇨🇳|TaiWan|Taiwan)).*$"
+  - name: 台湾-手动
+    type: select
+    include-all: true
+    filter: "(?=.*(广台|台湾|台灣|TW|Tai Wan|🇹🇼|🇨🇳|TaiWan|Taiwan)).*$"
+  - name: 台湾-自动
+    type: url-test
+    include-all: true
+    tolerance: 50
+    interval: 300
+    filter: "(?=.*(广台|台湾|台灣|TW|Tai Wan|🇹🇼|🇨🇳|TaiWan|Taiwan)).*$"
+
+
+
+  # 新加坡组
+  - name: 新加坡-故转
+    type: fallback
+    interval: 300
+    lazy: false
+    proxies:
+      - 新加坡-主节点
+      - 新加坡-自动
+  - name: 新加坡-主节点
+    type: select
+    include-all: true
+    filter: "(?=.*(广新|新加坡|SG|坡|狮城|🇸🇬|Singapore)).*$"
+  - name: 新加坡-手动
+    type: select
+    include-all: true
+    filter: "(?=.*(广新|新加坡|SG|坡|狮城|🇸🇬|Singapore)).*$"
+  - name: 新加坡-自动
+    type: url-test
+    include-all: true
+    tolerance: 50
+    interval: 300
+    filter: "(?=.*(广新|新加坡|SG|坡|狮城|🇸🇬|Singapore)).*$"
+
+
+
+  # 美国组
+  - name: 美国-故转
+    type: fallback
+    interval: 300
+    lazy: false
+    proxies:
+      - 美国-主节点
+      - 美国-自动
+  - name: 美国-主节点
+    type: select
+    include-all: true
+    filter: "(?=.*(广美|美|US|纽约|波特兰|达拉斯|俄勒|凤凰城|费利蒙|拉斯|洛杉|圣何塞|圣克拉|西雅|芝加|🇺🇸|United States)).*$"
+  - name: 美国-手动
+    type: select
+    include-all: true
+    filter: "(?=.*(广美|美|US|纽约|波特兰|达拉斯|俄勒|凤凰城|费利蒙|拉斯|洛杉|圣何塞|圣克拉|西雅|芝加|🇺🇸|United States)).*$"
+  - name: 美国-自动
+    type: url-test
+    include-all: true
+    tolerance: 50
+    interval: 300
+    filter: "(?=.*(广美|美|US|纽约|波特兰|达拉斯|俄勒|凤凰城|费利蒙|拉斯|洛杉|圣何塞|圣克拉|西雅|芝加|🇺🇸|United States)).*$"
+
+
+
+  # 其他组
+  - name: 其他-故转
+    type: fallback
+    interval: 300
+    lazy: false
+    proxies:
+      - 其他-主节点
+      - 其他-自动
+  - name: 其他-主节点
+    type: select
+    include-all: true
+    filter: "^((?!(直连|拒绝|广港|香港|HK|Hong Kong|🇭🇰|HongKong|广台|台湾|台灣|TW|Tai Wan|🇹🇼|🇨🇳|TaiWan|Taiwan|广新|新加坡|SG|坡|狮城|🇸🇬|Singapore|广美|美|US|纽约|波特兰|达拉斯|俄勒|凤凰城|费利蒙|拉斯|洛杉|圣何塞|圣克拉|西雅|芝加|🇺🇸|United States)).)*$"
+  - name: 其他-手动
+    type: select
+    include-all: true
+    filter: "^((?!(直连|拒绝|广港|香港|HK|Hong Kong|🇭🇰|HongKong|广台|台湾|台灣|TW|Tai Wan|🇹🇼|🇨🇳|TaiWan|Taiwan|广新|新加坡|SG|坡|狮城|🇸🇬|Singapore|广美|美|US|纽约|波特兰|达拉斯|俄勒|凤凰城|费利蒙|拉斯|洛杉|圣何塞|圣克拉|西雅|芝加|🇺🇸|United States)).)*$"
+  - name: 其他-自动
+    type: url-test
+    include-all: true
+    tolerance: 50
+    interval: 300
+    filter: "^((?!(直连|拒绝|广港|香港|HK|Hong Kong|🇭🇰|HongKong|广台|台湾|台灣|TW|Tai Wan|🇹🇼|🇨🇳|TaiWan|Taiwan|广新|新加坡|SG|坡|狮城|🇸🇬|Singapore|广美|美|US|纽约|波特兰|达拉斯|俄勒|凤凰城|费利蒙|拉斯|洛杉|圣何塞|圣克拉|西雅|芝加|🇺🇸|United States)).)*$"
+
+# ========================
+# 规则引擎（rules）
+# ========================
+rules:
+
+  # YouTube服务
+  - RULE-SET,Youtube / Domain,YouTube
+  
+  # 地区分流
+  - RULE-SET,Private / Domain,国内
+  - RULE-SET,China / Domain,国内
+  - RULE-SET,China / IP,国内,no-resolve
+  - RULE-SET,Direct / Domain,国内
+  - RULE-SET,Proxy / Domain,国外
+  - RULE-SET,Globe / Domain,国外  
+  
+  - MATCH,其他
+
+# ========================
+# 规则集提供者
+# ========================
+rule-anchor:
+  ip: &ip {type: http, interval: 86400, behavior: ipcidr, format: mrs}
+  domain: &domain {type: http, interval: 86400, behavior: domain, format: mrs}
+  class: &class {type: http, interval: 86400, behavior: classical, format: text}
+
+rule-providers:
+  # YouTube服务
+  Youtube / Domain: {<<: *class, path: "./rules/youtube.list"}  
+  
+  # 基础分流规则
+  Proxy / Domain: {<<: *class, path: "./rules/Proxy.list"}
+  Globe / Domain: {<<: *class, path: "./rules/Global.list"} 
+  Direct / Domain: {<<: *class, path: "./rules/Direct.list"}
+  China / Domain: {<<: *class, path: "./rules/cn.list"}
+  China / IP: {<<: *class, path: "./rules/cn-ip.list"}
+  Private / Domain: {<<: *class, path: "./rules/private.list"}
